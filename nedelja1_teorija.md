@@ -61,3 +61,34 @@ Iteracija:
 - Enkapsulacija: Zaštita unutrašnjeg stanja i kontrolisan pristup
 - Apstrakcija: Izdvajanje bitnog, skrivanje informacije
 - Polimorfizam: Različite klase iza istog interfejsa
+
+
+## Klasa
+
+- __init__: inicijalizuje stanje objekta
+- property: izvedeno polje bez eksplicitnog poziva metode
+- validacija: metoda čuva ispravnost stanja
+- self: referenca na konkretan objekat
+
+## Dataclass
+
+- @dataclass: automatski generiše __init__, __repr__ i __eqn__
+
+## Apstrakcija i polimorfizam
+
+- ABC: apstraktna klasa definiše ugovor
+
+## Nasleđivanje i kompozicija
+
+- Nasleđivanje (odnos "je"): Čvrsta veza sa nadklasom
+- Kompozicija (odnos "ima"): zavisnost se ne može promijeniti
+
+## SOLID: formulacije i poslijedice kršenja
+
+- S - Singe Responsibility: Klasa ima jedan razlog za promjenu
+- O - Open/Closed: otvoreno je za proširenje
+- L - Liskov substitution: 
+- I - Interface segregation:
+- D - Dependancy inversion:
+
+## 

@@ -121,3 +121,145 @@ N7. punoljetan: nema validacije - negativne godine prolaze bez greške.
 Dodatno: nijedna funkcija nema type hints ni docstring.
 """
 
+from abc import ABC, abstractmethod
+
+
+class Tarifa(ABC):
+    @abstractmethod
+    def cijena(self, osnova: float) -> float: ...
+
+class Standradna(Tarifa):
+    def cijena(self, osnova: float) -> float: 
+        return osnova
+    
+class Sezonska(Tarifa):
+    def cijena(self, osnova: float) -> float: ...
+    
+
+
+#Zadaci
+#1. Identifikovati odgovornost klase (princip S)
+#2. Razdvojiti na zasebne klase ili funkcije
+#3. Apstrahovati izvor podataka kroz Protocol (princip D)
+#4. Prosiriti - dodati drugi izvor bez izmjene servisa (princip O)
+#5. Testirati servis sa zamjenskim izvorom podataka
+#6. Uporediti rjesenje sa prijedlogom AI asistenta
+
+# Originalni kod
+"""
+class UpravljanjeRezervacijama:
+    def __init__(self, putanja):
+        self.putanja = putanja
+
+    def ucitaj(self):
+        return [l.strip().split(",") for l in open(self.putanja)]
+
+    def izracunaj_iznos(self, r):
+        return int(r[1]) * float(r[2])
+
+    def sacuvaj_izvjestaj(self, iznosi):
+        open("izvjestaj.txt", "w").write(str(iznosi))
+
+    def posalji_mail(self, iznosi):
+        print("Poslato: ", sum(iznosi))
+"""
+
+# 1. Odgovornosti klase UpravljanjeRezervacijama
+"""
+Klasa ima četiri razloga za promjenu, a po principu S treba da ima jedan:
+    - ucitaj:             čitanje podataka (format datoteke, izvor)
+    - izracunaj_iznos:    poslovno pravilo (obračun cijene)
+    - sacuvaj_izvjestaj:  format i lokacija izvještaja
+    - posalji_mail:       način obavještavanja
+Promjena formata CSV-a ili načina slanja maila mijenja istu klasu kao i
+promjena obračuna, a obračun se ne može testirati bez prave datoteke.
+"""
+
+import json
+from dataclasses import dataclass
+from typing import Protocol
+
+
+# 2. Razdvajanje odgovornosti
+@dataclass
+class Rezervacija:
+    gost: str
+    noci: int
+    cijena_noci: float
+
+    @property
+    def iznos(self) -> float:
+        return self.noci * self.cijena_noci
+
+
+# 3. Apstrakcija izvora podataka (princip D)
+class IzvorRezervacija(Protocol):
+    def ucitaj(self) -> list[Rezervacija]: ...
+
+
+class CsvIzvor:
+    def __init__(self, putanja: Path):
+        self.putanja = putanja
+
+    def ucitaj(self) -> list[Rezervacija]:
+        with self.putanja.open(newline="", encoding="utf-8") as f:
+            return [
+                Rezervacija(red["gost"], int(red["noci"]), float(red["cijena_noci"]))
+                for red in csv.DictReader(f)
+            ]
+
+
+# 4. Novi izvor - servis se ne mijenja (princip O)
+class JsonIzvor:
+    def __init__(self, putanja: Path):
+        self.putanja = putanja
+
+    def ucitaj(self) -> list[Rezervacija]:
+        with self.putanja.open(encoding="utf-8") as f:
+            return [Rezervacija(**r) for r in json.load(f)]
+
+
+class ServisRezervacija:
+    """Obračun rezervacija; zavisi samo od apstrakcije IzvorRezervacija."""
+
+    def __init__(self, izvor: IzvorRezervacija):
+        self.izvor = izvor
+
+    def iznosi(self) -> list[float]:
+        return [r.iznos for r in self.izvor.ucitaj()]
+
+
+def sacuvaj_izvjestaj(iznosi: list[float], putanja: Path) -> None:
+    putanja.write_text(str(iznosi), encoding="utf-8")
+
+
+def posalji_obavjestenje(iznosi: list[float]) -> None:
+    print("Poslato: ", sum(iznosi))
+
+
+# 5. Testovi sa zamjenskim izvorom podataka
+class LazniIzvor:
+    def __init__(self, rezervacije: list[Rezervacija]):
+        self.rezervacije = rezervacije
+
+    def ucitaj(self) -> list[Rezervacija]:
+        return self.rezervacije
+
+
+def test_servis_sa_laznim_izvorom():
+    izvor = LazniIzvor([Rezervacija("Ana", 3, 80), Rezervacija("Marko", 5, 65)])
+    assert ServisRezervacija(izvor).iznosi() == [240, 325]
+
+
+def test_csv_izvor(tmp_path):
+    p = tmp_path / "r.csv"
+    p.write_text("gost,noci,cijena_noci\nAna,3,80\n", encoding="utf-8")
+    assert ServisRezervacija(CsvIzvor(p)).iznosi() == [240.0]
+
+
+def test_json_izvor(tmp_path):
+    p = tmp_path / "r.json"
+    p.write_text('[{"gost": "Ana", "noci": 3, "cijena_noci": 80}]', encoding="utf-8")
+    assert ServisRezervacija(JsonIzvor(p)).iznosi() == [240.0]
+
+
