@@ -1,6 +1,12 @@
 # Kod za nedelju 1 - teorija je u nedelja1_teorija.md
 import csv
+import json
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Protocol
+
+import pytest
 
 # Osnovne podatke
 rezervacije = [
@@ -36,8 +42,6 @@ except ValueError as e:
 """
 
 
-print("Path")
-
 def prosjecna_cijena(putanja: Path) -> float:
     ukupno, noci = 0.0, 0
     with putanja.open(newline="", encoding="utf-8") as f:
@@ -53,22 +57,29 @@ def prosjecna_cijena(putanja: Path) -> float:
 # test_cijene.py
 def test_prosjek(tmp_path):
     p = tmp_path / "r.csv"
-    p.write_text("gost,noci,cijena_noci\nAna,2,100\nMarko,5,65\nIvana,2,120")
-    
-    rezultat = prosjecna_cijena(p)
-    
+    p.write_text("gost,noci,cijena_noci\nAna,2,100\nMarko,2,50\n", encoding="utf-8")
     assert prosjecna_cijena(p) == 75.0
-    print("Test uspješan! Prosječna cijea: ", rezultat)
 
 
+def test_prosjek_ponderisan_brojem_noci(tmp_path):
+    p = tmp_path / "r.csv"
+    p.write_text("gost,noci,cijena_noci\nAna,1,100\nMarko,3,60\n", encoding="utf-8")
+    assert prosjecna_cijena(p) == 70.0  # (1*100 + 3*60) / 4
 
 
-#Zadaci
-#1. Identifikovati nedostatke u kodu (najmanje 4)
-#2. Formulisati test koji otkriva svaki nedostatak
-#3. Amalizirati isti kod uz AI asistenta i uporediti nalaze
-#4. Ispraviti fukcije i potvrditi ispravke testovima
-#5. Obrazložiti zašto je svaki nedostatak rizičan u praksi
+def test_prosjek_prazna_datoteka(tmp_path):
+    p = tmp_path / "r.csv"
+    p.write_text("gost,noci,cijena_noci\n", encoding="utf-8")
+    with pytest.raises(ValueError):
+        prosjecna_cijena(p)
+
+
+# Zadaci
+# 1. Identifikovati nedostatke u kodu (najmanje 4)
+# 2. Formulisati test koji otkriva svaki nedostatak
+# 3. Amalizirati isti kod uz AI asistenta i uporediti nalaze
+# 4. Ispraviti fukcije i potvrditi ispravke testovima
+# 5. Obrazložiti zašto je svaki nedostatak rizičan u praksi
 
 # Originalni kod (sa nedostacima)
 """
@@ -121,29 +132,28 @@ N7. punoljetan: nema validacije - negativne godine prolaze bez greške.
 Dodatno: nijedna funkcija nema type hints ni docstring.
 """
 
-from abc import ABC, abstractmethod
-
 
 class Tarifa(ABC):
     @abstractmethod
     def cijena(self, osnova: float) -> float: ...
 
+
 class Standradna(Tarifa):
-    def cijena(self, osnova: float) -> float: 
+    def cijena(self, osnova: float) -> float:
         return osnova
-    
+
+
 class Sezonska(Tarifa):
     def cijena(self, osnova: float) -> float: ...
-    
 
 
-#Zadaci
-#1. Identifikovati odgovornost klase (princip S)
-#2. Razdvojiti na zasebne klase ili funkcije
-#3. Apstrahovati izvor podataka kroz Protocol (princip D)
-#4. Prosiriti - dodati drugi izvor bez izmjene servisa (princip O)
-#5. Testirati servis sa zamjenskim izvorom podataka
-#6. Uporediti rjesenje sa prijedlogom AI asistenta
+# Zadaci
+# 1. Identifikovati odgovornost klase (princip S)
+# 2. Razdvojiti na zasebne klase ili funkcije
+# 3. Apstrahovati izvor podataka kroz Protocol (princip D)
+# 4. Prosiriti - dodati drugi izvor bez izmjene servisa (princip O)
+# 5. Testirati servis sa zamjenskim izvorom podataka
+# 6. Uporediti rjesenje sa prijedlogom AI asistenta
 
 # Originalni kod
 """
@@ -174,10 +184,6 @@ Klasa ima četiri razloga za promjenu, a po principu S treba da ima jedan:
 Promjena formata CSV-a ili načina slanja maila mijenja istu klasu kao i
 promjena obračuna, a obračun se ne može testirati bez prave datoteke.
 """
-
-import json
-from dataclasses import dataclass
-from typing import Protocol
 
 
 # 2. Razdvajanje odgovornosti
@@ -261,5 +267,3 @@ def test_json_izvor(tmp_path):
     p = tmp_path / "r.json"
     p.write_text('[{"gost": "Ana", "noci": 3, "cijena_noci": 80}]', encoding="utf-8")
     assert ServisRezervacija(JsonIzvor(p)).iznosi() == [240.0]
-
-
